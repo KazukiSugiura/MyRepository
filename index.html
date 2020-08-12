@@ -1,0 +1,113 @@
+<!--◎動作手順-->
+<!--①ブラウザを開いてRECボタンを押す。-->
+<!--②マイクのアクセス確認が行われるので許可する。-->
+<!--③10秒間録音を行い、終了後はwav形式のファイルがダウンロード可能となる。-->
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Web Audio API を使ったレコーダーアプリ</title>
+		<style>
+			/*CSSのエリア*/
+			#box1{
+			width:520px;
+			padding:3px;
+			font-size:16px;
+			border:1px solid red;
+			text-align:left;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- コンテンツのエリア -->
+		<h1>Web Audio API を使ったレコーダーアプリ</h1>
+		<p id="box1">RECボタンを押してから10秒間録音を行い、音声データを生成します。<br>
+		録音を完了するとダウンロードが可能となります。</p>
+		<!--ボタンの配置-->
+		<p><button onclick="btn1(this);">REC</button></p>
+		<a id="dl">ダウンロード</a>
+
+	<script>
+	//ベンダープレフィックス対策
+	//様々なブラウザでマイクへのアクセス権を取得している。
+	//WebRTC仕様のAPI「getUserMedia()」
+	navigator.getUserMedia =
+		navigator.getUserMedia ||
+		navigator.webkitGetUserMedia;
+		navigator.mozGetUserMedia ||
+		navigator.msGetUserMedia;
+
+	window.URL = 
+		window.URL || 
+		window.webkitURL || 
+		window.mozURL || 
+		window.msURL;
+
+	//オーディオコンテキスト部分
+	window.AudioContext = 
+		window.AudioContext||
+		window.webkitAudioContext;
+
+	//Navigator.getUserMedia() メソッド
+	//自動的にアクセス権が求められる仕様。
+	//audioのみtrue。つまりvideoは使わずaudioのみで録音機能を実現する。
+	//Web Audio APIが問題なく使えるのであれば、第二引数で指定した関数を実行する
+	//これによりアクセス許可を求められ、許可されるとStreamが返される。
+	//このストリームはaudio要素やWeb AudioのAudioContextにアタッチしたり、MediaRecorder APIを使用して保存したりできる。
+	function btn1()
+	{
+		navigator.getUserMedia(
+		{
+			audio: true,
+			video: false
+		}, successFunc, errorFunc);
+		
+		//trueの時の関数
+		function successFunc(stream) 
+		{
+			var recorder = new MediaRecorder(stream, 
+			{
+				mimeType: 'video/webm;codecs=vp9'
+			});
+
+			//音を拾い続けるための配列。chunk：塊
+			var chunks = [];
+
+			//集音のイベントを登録する
+			recorder.addEventListener('dataavailable', function(ele)
+			{
+				if (ele.data.size > 0)
+				{
+					chunks.push(ele.data);
+				}
+			});
+
+			// recorder.stopが実行された時のイベント
+			recorder.addEventListener('stop', function()
+			{
+				var dl = document.querySelector("#dl");
+
+				//集音したものから音声データを作成する
+				dl.href = URL.createObjectURL(new Blob(chunks));
+				dl.download = 'sample.wav';
+			});
+
+			recorder.start();
+
+			//10秒後に集音を終了する。
+			setTimeout(function()
+			{
+				alert("stop");
+				recorder.stop();
+			}, 10000);
+		}
+
+		//falseの時の関数
+		function errorFunc(error) {
+			alert("error");
+		}
+	}
+	</script>
+	</body>
+</html>
